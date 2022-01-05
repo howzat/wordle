@@ -11,7 +11,7 @@ import (
 	"github.com/howzat/wordle/wordset"
 )
 
-const BaseDir = "dictionaries/wordset-dictionary/data"
+const WordsetDataDir = "dictionaries/wordset-dictionary/data"
 
 func main() {
 
@@ -29,10 +29,10 @@ func main() {
 	consumer := model.NewWordsConsumer(logger)
 	go consumer.Start(ctx)
 
-	logger.Info("reading words from Wordset dictionary", zap.String("baseDir", BaseDir))
-	files, err := ioutil.ReadDir(BaseDir)
+	logger.Info("reading words from Wordset dictionary", zap.String("path", WordsetDataDir))
+	files, err := ioutil.ReadDir(WordsetDataDir)
 	if err != nil {
-		panic(model.WrapErr(err, "could not list contents of directory [%v]", BaseDir))
+		panic(model.WrapErr(err, "could not list contents of directory [%v]", WordsetDataDir))
 	}
 
 	var wg sync.WaitGroup
@@ -41,7 +41,7 @@ func main() {
 		file := file
 		go func() {
 			wg.Add(1)
-			producer := wordset.NewWordsetWordsProducer(BaseDir, consumer.IngestChan, logger)
+			producer := wordset.NewWordsetWordsProducer(WordsetDataDir, consumer.IngestChan, logger)
 			producer.ReadWordsetFile(file)
 		}()
 	}
