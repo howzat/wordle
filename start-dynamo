@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+docker run --name dynamodb -d -p 8000:8000 amazon/dynamodb-local:1.16.0 -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
+
+exec ./reset-dynamo

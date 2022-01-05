@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+reset_table() {
+  table="$1"
+  # Suppress all output, even errors, from delete because delete will fail if the table doesn't already exist, which is OK
+  aws --endpoint-url=http://localhost:8000 dynamodb delete-table --table-name "$table" >/dev/null 2>&1
+  # Suppress standard output but not errors from create
+  aws --endpoint-url=http://localhost:8000 dynamodb create-table --cli-input-json file://schema/"$table".json > /dev/null || exit $?
+}
+
+# Dummy AWS credentials to work around `Unable to locate credentials. You can configure credentials by running "aws configure".` error from `aws dynamodb create-table`.
+AWS_ACCESS_KEY_ID=dummy
+AWS_SECRET_ACCESS_KEY=dummy
+AWS_REGION=local
+export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
+
+reset_table words
+
+echo "All tables (re)created successfully"
