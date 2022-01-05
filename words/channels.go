@@ -1,13 +1,20 @@
-package model
+package words
 
 import (
 	"context"
-	"fmt"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"regexp"
 	"sync"
 )
+
+func NewWordsConsumer(log *zap.Logger) *WordConsumer {
+	return &WordConsumer{
+		logger:          log,
+		Words:           make([]string, 0),
+		AddWordsChannel: make(chan Result, 1),
+		IngestChan:      make(chan Result, 1),
+	}
+}
 
 type WordConsumer struct {
 	IngestChan      chan Result
@@ -46,15 +53,6 @@ func (c *WordConsumer) ListWords() []string {
 	return c.Words
 }
 
-func NewWordsConsumer(log *zap.Logger) *WordConsumer {
-	return &WordConsumer{
-		logger:          log,
-		Words:           make([]string, 0),
-		AddWordsChannel: make(chan Result, 1),
-		IngestChan:      make(chan Result, 1),
-	}
-}
-
 type Result struct {
 	Err   error
 	Words []string
@@ -78,13 +76,32 @@ func Failure(e error) Result {
 	}
 }
 
-func WrapErr(err error, message string, args ...interface{}) error {
-	return errors.Wrap(err, fmt.Sprintf(message, args))
-}
-
 type FilterFunc = func(e string) bool
 
 var filter = func(e string) bool {
 	matches, _ := regexp.MatchString(`^[a-zA-Z]+$`, e)
 	return matches
 }
+
+type WordsProducer struct {
+	ingestChan chan Result
+	logger     *zap.Logger
+}
+
+func NewWordsProducer(ingestChan chan Result, log *zap.Logger) WordsProducer {
+	return WordsProducer{
+		logger:     log,
+		ingestChan: ingestChan,
+	}
+}
+
+func (w WordsProducer) Work(readWords ReadWordsFn) {
+	words, err := readWords()
+	if err != nil {
+		w.ingestChan <- Failure(err)
+	} else {
+		w.ingestChan <- Success(words)
+	}
+}
+
+type ReadWordsFn = func() ([]string, error)
