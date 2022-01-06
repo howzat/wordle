@@ -7,7 +7,7 @@ Dictionaries / Submodules
 ---
 The project relies on several sources to compile a list of candidate words for the Wordle.
 * [Github Wordset Dictionary](https://github.com/wordset/wordset-dictionary.git)
-* [Github English Words Dictionay](git@github.com:dwyl/english-words.git)
+* [Github English Words Dictionary](https://github.com/dwyl/english-words.git)
 
 To run the DynamoDB population scripts both repositories (submodules) need to be cloned
 ```shell
