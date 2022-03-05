@@ -21,3 +21,4 @@ wordle
 
 # macOS folder metadata
 .DS_Store
+/package-lock.json

@@ -1,5 +1,5 @@
 {
-  "TableName": "build.hospital.assessments",
+  "TableName": "build.dictionary",
   "AttributeDefinitions": [
     {
       "AttributeName": "word",
