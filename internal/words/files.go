@@ -2,9 +2,10 @@ package words
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"strings"
+
+	"github.com/go-logr/logr"
 )
 
 type WordsetFile = map[string]WordsetDictionaryEntry
@@ -14,9 +15,9 @@ type WordsetDictionaryEntry struct {
 	Word string `json:"word"`
 }
 
-func ParseWordsetDictionary(log *zap.Logger, filepath string) ReadWordsFn {
+func ParseWordsetDictionary(log *logr.Logger, filepath string) ReadWordsFn {
 	return func() ([]string, error) {
-		log.Info("reading dictionary", zap.String("source", filepath))
+		log.Info("reading dictionary", "source", filepath)
 		f, err := ioutil.ReadFile(filepath)
 
 		if err != nil {
@@ -43,12 +44,12 @@ func ParseWordsetDictionary(log *zap.Logger, filepath string) ReadWordsFn {
 	}
 }
 
-func ParseEnglishWordsDictionary(log *zap.Logger, filepath string) ReadWordsFn {
+func ParseEnglishWordsDictionary(log *logr.Logger, filepath string) ReadWordsFn {
 	return func() ([]string, error) {
-		log.Info("reading dictionary", zap.String("source", filepath))
+		log.Info("reading dictionary", "source", filepath)
 		file, err := ioutil.ReadFile(filepath)
 		if err != nil {
-			return nil, WrapErr(err, "error reading file contents", filepath)
+			return nil, WrapErr(err, "error reading file contents [%v]", filepath)
 		}
 
 		return strings.Split(string(file), "\n"), nil
