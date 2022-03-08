@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"strings"
-
-	"github.com/go-logr/logr"
 )
 
 type WordsetFile = map[string]WordsetDictionaryEntry
@@ -15,9 +13,8 @@ type WordsetDictionaryEntry struct {
 	Word string `json:"word"`
 }
 
-func ParseWordsetDictionary(log *logr.Logger, filepath string) ReadWordsFn {
-	return func() ([]string, error) {
-		log.Info("reading dictionary", "source", filepath)
+func ParseWordsetDictionary(filepath string) ReadWordsFn {
+	return func(ftrs ...FilterFunc) ([]string, error) {
 		f, err := ioutil.ReadFile(filepath)
 
 		if err != nil {
@@ -44,9 +41,8 @@ func ParseWordsetDictionary(log *logr.Logger, filepath string) ReadWordsFn {
 	}
 }
 
-func ParseEnglishWordsDictionary(log *logr.Logger, filepath string) ReadWordsFn {
-	return func() ([]string, error) {
-		log.Info("reading dictionary", "source", filepath)
+func ParseEnglishWordsDictionary(filepath string) ReadWordsFn {
+	return func(ftrs ...FilterFunc) ([]string, error) {
 		file, err := ioutil.ReadFile(filepath)
 		if err != nil {
 			return nil, WrapErr(err, "error reading file contents [%v]", filepath)
