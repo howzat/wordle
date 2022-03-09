@@ -7,15 +7,15 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func NewWordsConsumer(log *logr.Logger) *WordConsumer {
-	return &WordConsumer{
+func NewConsumer(log *logr.Logger) *Consumer {
+	return &Consumer{
 		logger:         log,
 		words:          make([]string, 0),
 		AddWordsStream: make(chan Result, 1),
 	}
 }
 
-type WordConsumer struct {
+type Consumer struct {
 	AddWordsStream chan Result
 	readWordsLock  sync.Mutex
 	words          []string
@@ -25,7 +25,7 @@ type WordConsumer struct {
 /*
 Consume is always terminated on the side of the producer
 */
-func (c *WordConsumer) Consume(ctx context.Context) {
+func (c *Consumer) Consume(ctx context.Context) {
 
 	c.readWordsLock.Lock()
 	for {
@@ -44,7 +44,7 @@ func (c *WordConsumer) Consume(ctx context.Context) {
 	}
 }
 
-func (c *WordConsumer) ListWords() []string {
+func (c *Consumer) ListWords() []string {
 	c.readWordsLock.Lock()
 	defer c.readWordsLock.Unlock()
 	return c.words

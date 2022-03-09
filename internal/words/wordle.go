@@ -19,8 +19,10 @@ func CompileWordList(ctx context.Context, log *logr.Logger, config CompileConfig
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	ctx, done := context.WithCancel(ctx)
-	consumer := NewWordsConsumer(log)
+	consumer := NewConsumer(log)
 	go consumer.Consume(ctx)
+
+	producer := NewProducer(log, consumer.AddWordsStream)
 
 	files, err := ioutil.ReadDir(config.WordsetDataDir)
 	if err != nil {
@@ -28,14 +30,13 @@ func CompileWordList(ctx context.Context, log *logr.Logger, config CompileConfig
 		return nil, WrapErr(err, "could not list contents of directory [%v]", config.WordsetDataDir)
 	}
 
-	ingest := consumer.AddWordsStream
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		fp := filepath("words_alpha.txt", config.EnglishWordsDataDir)
 		englishWordsDictionary := ParseEnglishWordsDictionary(fp)
-		readWords(ingest, englishWordsDictionary)
+		producer.Produce(englishWordsDictionary, WordleCandidate)
 	}()
 
 	for _, wordFile := range files {
@@ -44,7 +45,7 @@ func CompileWordList(ctx context.Context, log *logr.Logger, config CompileConfig
 		go func() {
 			defer wg.Done()
 			fp := filepath(f.Name(), config.WordsetDataDir)
-			readWords(ingest, ParseWordsetDictionary(fp))
+			producer.Produce(ParseWordsetDictionary(fp), WordleCandidate)
 		}()
 	}
 
@@ -66,13 +67,4 @@ func filepath(filename string, baseDir string) string {
 type WordList struct {
 	ingested int
 	words    []string
-}
-
-func readWords(ingest chan Result, readWords ReadWordsFn) {
-	words, err := readWords()
-	if err != nil {
-		ingest <- Failure(err)
-	} else {
-		ingest <- Success(words)
-	}
 }
