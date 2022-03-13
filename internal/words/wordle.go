@@ -2,49 +2,43 @@ package words
 
 import (
 	"context"
+	"io/fs"
 	"io/ioutil"
-	"runtime"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/go-logr/logr"
 )
 
-type CompileConfig struct {
-	Outfile             string
-	WordsetDataDir      string
-	EnglishWordsDataDir string
-}
+func CompileWordList(ctx context.Context, log *logr.Logger, wordSource WordSources) (*WordList, error) {
 
-func CompileWordList(ctx context.Context, log *logr.Logger, config CompileConfig) (*WordList, error) {
-
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	ctx, done := context.WithCancel(ctx)
 	consumer := NewConsumer(log)
 	go consumer.Consume(ctx)
 
 	producer := NewProducer(log, consumer.AddWordsStream)
 
-	files, err := ioutil.ReadDir(config.WordsetDataDir)
-	if err != nil {
-		done()
-		return nil, WrapErr(err, "could not list contents of directory [%v]", config.WordsetDataDir)
-	}
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fp := filepath("words_alpha.txt", config.EnglishWordsDataDir)
-		englishWordsDictionary := ParseEnglishWordsDictionary(fp)
+		englishWordsDictionary := ParseLineSeperatedDictionary(wordSource.EnglishWordFile)
 		producer.Produce(englishWordsDictionary, WordleCandidate)
 	}()
 
-	for _, wordFile := range files {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		localWordsList := ParseLineSeperatedDictionary(wordSource.LocalWordFiles[0])
+		producer.Produce(localWordsList, WordleCandidate)
+	}()
+
+	for _, wordFile := range wordSource.WordSetFiles {
 		wg.Add(1)
-		f := wordFile
+		fp := wordFile
 		go func() {
 			defer wg.Done()
-			fp := filepath(f.Name(), config.WordsetDataDir)
 			producer.Produce(ParseWordsetDictionary(fp), WordleCandidate)
 		}()
 	}
@@ -55,16 +49,64 @@ func CompileWordList(ctx context.Context, log *logr.Logger, config CompileConfig
 	words := consumer.ListWords()
 
 	return &WordList{
-		ingested: len(words),
-		words:    words,
+		Ingested: len(words),
+		Words:    words,
 	}, nil
 }
 
-func filepath(filename string, baseDir string) string {
-	return baseDir + "/" + filename
+type WordList struct {
+	Ingested int
+	Words    []string
 }
 
-type WordList struct {
-	ingested int
-	words    []string
+func NewWordSourceFiles(baseDir string) (*WordSources, error) {
+	wordSources := WordSources{baseDir: baseDir}
+	ewf, err := wordSources.filepath("english-words/words_alpha.txt")
+	if err != nil {
+		return nil, err
+	}
+
+	wordSources.EnglishWordFile = ewf
+
+	ld, err := wordSources.filepath("wordlist.txt")
+	if err != nil {
+		return nil, err
+	}
+
+	wordSources.LocalWordFiles = []string{ld}
+
+	directory, err := wordSources.filepath("wordset-dictionary/data/")
+	wordSetDirectory, err := ioutil.ReadDir(directory)
+	if err != nil {
+		return nil, WrapErr(err, "could not list contents of directory [%v]", directory)
+	}
+
+	wsf := make([]string, len(wordSetDirectory))
+	err = filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			panic(err)
+		}
+
+		if filepath.Ext(d.Name()) == ".json" {
+			wsf = append(wsf, path)
+		}
+
+		return nil
+	})
+
+	wordSources.WordSetFiles = wsf
+	return &wordSources, nil
+}
+
+type WordSources struct {
+	WordSetFiles    []string
+	EnglishWordFile string
+	LocalWordFiles  []string
+	baseDir         string
+}
+
+func (c WordSources) filepath(path string) (string, error) {
+	fullpath := c.baseDir + "/" + path
+	_, err := os.Stat(fullpath)
+	return fullpath, err
 }

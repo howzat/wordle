@@ -14,12 +14,10 @@ func TestCompileWordList(t *testing.T) {
 	log, err := logging.NewProductionLogger("TestCompileWordList")
 	require.NoError(t, err)
 
-	compiled, err := CompileWordList(context.TODO(), log, CompileConfig{
-		Outfile:             "wordle-words.json",
-		WordsetDataDir:      "../../dictionaries/wordset-dictionary/data",
-		EnglishWordsDataDir: "../../dictionaries/english-words",
-	})
+	files, err := NewWordSourceFiles("../../dictionaries")
+	require.NoError(t, err)
+	compiled, err := CompileWordList(context.TODO(), log, *files)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 478243, compiled.ingested)
+	assert.Equal(t, 694799, compiled.Ingested)
 }

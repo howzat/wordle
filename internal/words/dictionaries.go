@@ -81,9 +81,10 @@ func ParseWordsetDictionary(filepath string) ReadWordsFn {
 	}
 }
 
-func ParseEnglishWordsDictionary(filepath string) ReadWordsFn {
+func ParseLineSeperatedDictionary(filepath string) ReadWordsFn {
 	return func(ftrs ...FilterFunc) ([]string, error) {
 		file, err := ioutil.ReadFile(filepath)
+
 		if err != nil {
 			return nil, WrapErr(err, "error reading file contents [%v]", filepath)
 		}
