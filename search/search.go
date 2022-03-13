@@ -42,14 +42,14 @@ func NewWordle(letters string) (*Wordle, error) {
 	}, nil
 }
 
-func NewSearchEngine(words []string) SearchEngine {
+func NewSearchEngine(db *IndexedDB) SearchEngine {
 	return &LocalSearchEngine{
-		words: words,
+		words: db,
 	}
 }
 
 type LocalSearchEngine struct {
-	words []string
+	words *IndexedDB
 }
 
 var NoKnowledge = []MatchType{None, None, None, None, None}
@@ -111,8 +111,8 @@ func NewHashingIDFn(hr func() hash.Hash64) IDFn {
 	}
 }
 
-var xxHashID IDFn = NewHashingIDFn(xxhash.New)
-var seaHashID IDFn = NewHashingIDFn(func() hash.Hash64 {
+var UseXXHashID IDFn = NewHashingIDFn(xxhash.New)
+var UseSeaHashID IDFn = NewHashingIDFn(func() hash.Hash64 {
 	var h hash.Hash64 = seahash.New()
 	return h
 })

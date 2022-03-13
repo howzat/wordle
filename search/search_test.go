@@ -38,7 +38,13 @@ func TestLetterMatches(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			store := NewSearchEngine(tt.dictionary)
+			log, err := logging.NewProductionLogger(tt.name)
+			require.NoError(t, err)
+
+			db, err := NewIndexedDB(*log, tt.dictionary, UseXXHashID)
+			require.NoError(t, err)
+
+			store := NewSearchEngine(db)
 			search, err := NewWordle(tt.search)
 			require.NoError(t, err)
 
@@ -53,8 +59,8 @@ func TestLetterMatches(t *testing.T) {
 }
 
 func TestHashingConsistencyForIndexedWordDB(t *testing.T) {
-	t.Run("test indexing with xxHash", testIndexingWithHasher(xxHashID))
-	t.Run("test indexing with seaHash", testIndexingWithHasher(seaHashID))
+	t.Run("test indexing with xxHash", testIndexingWithHasher(UseXXHashID))
+	t.Run("test indexing with seaHash", testIndexingWithHasher(UseSeaHashID))
 }
 
 func testIndexingWithHasher(id IDFn) func(b *testing.T) {
@@ -90,8 +96,8 @@ func testIndexingWithHasher(id IDFn) func(b *testing.T) {
 // XXHashIndexedWordDB-8   	1000000000	         0.5508 ns/op
 // SeaHashIndexedWordDB-8   1000000000	         0.5473 ns/op
 func BenchmarkTestHashingForIndexedWordDB(b *testing.B) {
-	b.Run("xxHash hasher", testHasher(xxHashID))
-	b.Run("seaHash hasher", testHasher(seaHashID))
+	b.Run("xxHash hasher", testHasher(UseXXHashID))
+	b.Run("seaHash hasher", testHasher(UseSeaHashID))
 }
 
 func testHasher(id IDFn) func(b *testing.B) {

@@ -35,7 +35,12 @@ func main() {
 
 	log.Info("complete", "ingested", compiled.Ingested, "error", compileErr)
 
-	ws := search.NewSearchEngine(compiled.Words)
+	db, err := search.NewIndexedDB(*log, compiled.Words, search.UseSeaHashID)
+	if err != nil {
+		panic(err)
+	}
+
+	ws := search.NewSearchEngine(db)
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Simple Shell")
