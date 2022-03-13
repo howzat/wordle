@@ -2,7 +2,9 @@ package search
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
+	"runtime"
 	"testing"
 	"time"
 
@@ -30,18 +32,6 @@ func TestLetterMatches(t *testing.T) {
 			search:    "brink",
 			knowledge: []MatchType{None, None, None, None, None},
 			err:       errors.New("searching without knowledge will match the entire dictionary"),
-		}, {
-			name:       "single letter match in the wrong place",
-			search:     "audio",
-			dictionary: []string{"zebra", "bunks"},
-			results:    []string{"zebra"},
-			knowledge:  []MatchType{Part, None, None, None, None},
-		}, {
-			name:       "multiple letter match in the wrong place",
-			search:     "later",
-			dictionary: []string{"slate", "bunks"},
-			results:    []string{"slate"},
-			knowledge:  []MatchType{Part, Part, Part, Part, None},
 		},
 	}
 	for _, tt := range tests {
@@ -66,25 +56,57 @@ func TestSeaHashedIndexedWordDB(t *testing.T) {
 	db, err := NewIndexedDB([]string{"chunk", "latch"}, seaHashID)
 	require.NoError(t, err)
 
+	chunkID, err := seaHashID("chunk")
+	require.NoError(t, err)
+
+	latchID, err := seaHashID("latch")
+	require.NoError(t, err)
+
 	index := newIndex()
-	index['a'] = []uint64{2}
-	index['c'] = []uint64{1, 2}
-	index['h'] = []uint64{1, 2}
-	index['u'] = []uint64{1}
-	index['n'] = []uint64{1}
-	index['k'] = []uint64{1}
-	index['l'] = []uint64{2}
-	index['t'] = []uint64{2}
+	index['a'] = []uint64{latchID}
+	index['c'] = []uint64{chunkID, latchID}
+	index['h'] = []uint64{chunkID, latchID}
+	index['u'] = []uint64{chunkID}
+	index['n'] = []uint64{chunkID}
+	index['k'] = []uint64{chunkID}
+	index['l'] = []uint64{latchID}
+	index['t'] = []uint64{latchID}
 
 	assert.Equal(t, db.index, index)
-	assert.Equal(t, db.reverseIndex[1], "chunk")
-	assert.Equal(t, db.reverseIndex[2], "latch")
+	assert.Equal(t, db.reverseIndex[chunkID], "chunk")
+	assert.Equal(t, db.reverseIndex[latchID], "latch")
 }
 
-func TestIndexedWordDB(t *testing.T) {
+func TestXXHashedIndexedWordDB(t *testing.T) {
 
+	db, err := NewIndexedDB([]string{"chunk", "latch"}, xxHashID)
+	require.NoError(t, err)
+
+	chunkID, err := xxHashID("chunk")
+	require.NoError(t, err)
+
+	latchID, err := xxHashID("latch")
+	require.NoError(t, err)
+
+	index := newIndex()
+	index['a'] = []uint64{latchID}
+	index['c'] = []uint64{chunkID, latchID}
+	index['h'] = []uint64{chunkID, latchID}
+	index['u'] = []uint64{chunkID}
+	index['n'] = []uint64{chunkID}
+	index['k'] = []uint64{chunkID}
+	index['l'] = []uint64{latchID}
+	index['t'] = []uint64{latchID}
+
+	assert.Equal(t, db.index, index)
+	assert.Equal(t, db.reverseIndex[chunkID], "chunk")
+	assert.Equal(t, db.reverseIndex[latchID], "latch")
+}
+
+// XXHashIndexedWordDB-8   	1000000000	         0.5508 ns/op
+// SeaHashIndexedWordDB-8   1000000000	         0.5473 ns/op
+func BenchmarkTestSeaHashIndexedWordDB(b *testing.B) {
 	rand.Seed(time.Now().UnixNano())
-
 	size := 1000000
 	var words = make([]string, size)
 	for i := 0; i < size; i++ {
@@ -92,10 +114,11 @@ func TestIndexedWordDB(t *testing.T) {
 		words[i] = wordle.letters
 	}
 
-	db, err := NewIndexedDB(words, seaHashID)
-	require.NoError(t, err)
-
-	assert.Equal(t, db.size, size)
+	db, err := NewIndexedDB(words, xxHashID)
+	require.NoError(b, err)
+	b.Logf("index contains %v items", db.size)
+	assert.Equal(b, db.size, size)
+	PrintMemUsage()
 }
 
 var alphabet = []rune("abcdefghijklmnopqrstuvwxyz")
@@ -108,4 +131,18 @@ func randomWordle() Wordle {
 	return Wordle{
 		letters: string(b),
 	}
+}
+
+func PrintMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
+	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
+	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
+	fmt.Printf("\tNumGC = %v\n", m.NumGC)
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
 }

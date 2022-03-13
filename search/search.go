@@ -96,15 +96,19 @@ type IndexedDB struct {
 
 type IDFn = func(string) (uint64, error)
 
-func NewHashingIDFn(h hash.Hash64) IDFn {
+func NewHashingIDFn(hr func() hash.Hash64) IDFn {
 	return func(s string) (uint64, error) {
+		h := hr()
 		_, err := h.Write([]byte(s))
 		return h.Sum64(), err
 	}
 }
 
-var seaHashID IDFn = NewHashingIDFn(seahash.New())
-var xxHashID IDFn = NewHashingIDFn(xxhash.New())
+var xxHashID IDFn = NewHashingIDFn(xxhash.New)
+var seaHashID IDFn = NewHashingIDFn(func() hash.Hash64 {
+	var h hash.Hash64 = seahash.New()
+	return h
+})
 
 func newIndex() map[rune][]uint64 {
 	return map[rune][]uint64{
