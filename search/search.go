@@ -6,6 +6,7 @@ import (
 
 	"blainsmith.com/go/seahash"
 	"github.com/cespare/xxhash"
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 )
 
@@ -64,27 +65,33 @@ func (ws *LocalSearchEngine) Search(guess Wordle) (*MatchResult, error) {
 	}, nil
 }
 
-func NewIndexedDB(ingested []string, idFn IDFn) (*IndexedDB, error) {
+func NewIndexedDB(log logr.Logger, words []string, idFn IDFn) (*IndexedDB, error) {
+	log.WithName("IndexDB")
+	index := newAlphaMap()
+	reverseIndex := make(map[uint64]string, len(words))
 
-	idx := newIndex()
-	ridx := make(map[uint64]string, len(ingested))
-
-	for _, w := range ingested {
+	for _, w := range words {
 		id, err := idFn(w)
 		if err != nil {
 			return nil, err
 		}
 
-		ridx[id] = w
-		for _, letter := range []rune(w) {
-			idx[letter] = append(idx[letter], id)
+		if a, ok := reverseIndex[id]; ok {
+			if a != w {
+				log.Info("possible collision between %v and %v\n", a, w)
+			}
+		}
+
+		reverseIndex[id] = w
+		for _, c := range []rune(w) {
+			index[c] = append(index[c], id)
 		}
 	}
 
 	return &IndexedDB{
-		size:         len(ingested),
-		reverseIndex: ridx,
-		index:        idx,
+		size:         len(reverseIndex),
+		reverseIndex: reverseIndex,
+		index:        index,
 	}, nil
 }
 
@@ -110,7 +117,7 @@ var seaHashID IDFn = NewHashingIDFn(func() hash.Hash64 {
 	return h
 })
 
-func newIndex() map[rune][]uint64 {
+func newAlphaMap() map[rune][]uint64 {
 	return map[rune][]uint64{
 		'a': {},
 		'b': {},
