@@ -19,5 +19,5 @@ func TestCompileWordList(t *testing.T) {
 	compiled, err := CompileWordList(context.TODO(), log, *files)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 694799, compiled.Ingested)
+	assert.Equal(t, 31941, compiled.Ingested)
 }

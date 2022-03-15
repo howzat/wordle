@@ -12,29 +12,33 @@ type SearchEngine interface {
 
 type Wordle struct {
 	letters   string
-	knowledge []MatchType
+	knowledge []Knowlege
 }
 
-type MatchType int8
+type Knowlege int8
 
 const (
-	Full MatchType = iota
-	Part
+	Full Knowlege = iota
+	Present
 	None
 )
 
 type MatchResult struct {
-	Items         []string
-	Guess         Wordle
-	LetterMatches []MatchType
+	Items []string
+	Guess Wordle
 }
 
-func NewWordle(letters string) (*Wordle, error) {
+func NewWordleSearch(letters string, knowledge []Knowlege) (*Wordle, error) {
 	if len(letters) > 5 {
 		return nil, errors.New("guesses must have exactly 5 characters")
 	}
+	if len(letters) > 5 {
+		return nil, errors.New("knowledge must have exactly 5 items")
+	}
+
 	return &Wordle{
-		letters: letters,
+		letters:   letters,
+		knowledge: knowledge,
 	}, nil
 }
 
@@ -48,15 +52,28 @@ type LocalSearchEngine struct {
 	words *IndexedDB
 }
 
-var NoKnowledge = []MatchType{None, None, None, None, None}
+var NoKnowledge = []Knowlege{None, None, None, None, None}
 
 func (ws *LocalSearchEngine) Search(guess Wordle) (*MatchResult, error) {
 
 	if guess.knowledge == nil || reflect.DeepEqual(guess.knowledge, NoKnowledge) {
-		return nil, errors.New("searching without knowledge will match the entire dictionary")
+		return nil, errors.New("searching without search will match the entire dictionary")
+	}
+
+	var results []string
+	for i, fact := range guess.knowledge {
+		if fact == Present {
+			l := guess.letters[i]
+			ids := ws.words.index[string(l)]
+			for _, id := range ids {
+				word := ws.words.reverseIndex[id]
+				results = append(results, word)
+			}
+		}
 	}
 
 	return &MatchResult{
-		LetterMatches: []MatchType{None, None, None, None, None},
+		Items: results,
+		Guess: guess,
 	}, nil
 }

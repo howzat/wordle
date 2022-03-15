@@ -32,14 +32,14 @@ func testIndexingWithHasher(id IDFn) func(b *testing.T) {
 		require.NoError(t, err)
 
 		index := newAlphaMap()
-		index['a'] = []uint64{latchID}
-		index['c'] = []uint64{chunkID, latchID}
-		index['h'] = []uint64{chunkID, latchID}
-		index['u'] = []uint64{chunkID}
-		index['n'] = []uint64{chunkID}
-		index['k'] = []uint64{chunkID}
-		index['l'] = []uint64{latchID}
-		index['t'] = []uint64{latchID}
+		index["a"] = []uint64{latchID}
+		index["c"] = []uint64{chunkID, latchID}
+		index["h"] = []uint64{chunkID, latchID}
+		index["u"] = []uint64{chunkID}
+		index["n"] = []uint64{chunkID}
+		index["k"] = []uint64{chunkID}
+		index["l"] = []uint64{latchID}
+		index["t"] = []uint64{latchID}
 
 		assert.Equal(t, db.index, index)
 		assert.Equal(t, db.reverseIndex[chunkID], "chunk")
@@ -64,8 +64,7 @@ func testHasher(id IDFn) func(b *testing.B) {
 		var words = make([]string, size)
 		var deduped = map[string]bool{}
 		for i := 0; i < size; i++ {
-			wordle := randomWordle()
-			letters := wordle.letters
+			letters := randomString()
 			words[i] = letters
 			deduped[letters] = true
 		}
@@ -78,16 +77,13 @@ func testHasher(id IDFn) func(b *testing.B) {
 	}
 }
 
-var alphabet = []rune("abcdefghijklmnopqrstuvwxyz")
-
-func randomWordle() Wordle {
+func randomString() string {
 	b := make([]rune, 5)
 	for i := range b {
-		b[i] = alphabet[rand.Intn(len(alphabet))]
+		b[i] = rune(Alphabet[rand.Intn(len(Alphabet))][0])
 	}
-	return Wordle{
-		letters: string(b),
-	}
+
+	return string(b)
 }
 
 func PrintMemUsage() {

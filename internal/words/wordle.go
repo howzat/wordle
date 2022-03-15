@@ -24,14 +24,14 @@ func CompileWordList(ctx context.Context, log *logr.Logger, wordSource WordSourc
 	go func() {
 		defer wg.Done()
 		englishWordsDictionary := ParseLineSeperatedDictionary(wordSource.EnglishWordFile)
-		producer.Produce(englishWordsDictionary, WordleCandidate)
+		producer.Produce(englishWordsDictionary, WordleCandidate, ChangeToLowerCase)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		localWordsList := ParseLineSeperatedDictionary(wordSource.LocalWordFiles[0])
-		producer.Produce(localWordsList, WordleCandidate)
+		producer.Produce(localWordsList, WordleCandidate, ChangeToLowerCase)
 	}()
 
 	for _, wordFile := range wordSource.WordSetFiles {
@@ -39,7 +39,7 @@ func CompileWordList(ctx context.Context, log *logr.Logger, wordSource WordSourc
 		fp := wordFile
 		go func() {
 			defer wg.Done()
-			producer.Produce(ParseWordsetDictionary(fp), WordleCandidate)
+			producer.Produce(ParseWordsetDictionary(fp), WordleCandidate, ChangeToLowerCase)
 		}()
 	}
 

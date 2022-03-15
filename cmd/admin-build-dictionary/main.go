@@ -36,6 +36,7 @@ func main() {
 	log.Info("complete", "ingested", compiled.Ingested, "error", compileErr)
 
 	db, err := search.NewIndexedDB(*log, compiled.Words, search.UseSeaHashID)
+
 	if err != nil {
 		panic(err)
 	}
@@ -46,12 +47,14 @@ func main() {
 	fmt.Println("Simple Shell")
 	fmt.Println("---------------------")
 
+	wordle := db.PickRandomWord()
+
 	for {
 		fmt.Print("guess> ")
 		choice, _ := reader.ReadString('\n')
 		choice = strings.Replace(choice, "\n", "", -1)
 
-		s, err := search.NewWordle(choice)
+		s, err := search.NewWordleSearch(choice, search.BuildKnowledgeForGuess(wordle, choice))
 		if err != nil {
 			fmt.Println(err.Error())
 		}

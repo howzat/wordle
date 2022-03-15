@@ -14,8 +14,8 @@ func NewProducer(log *logr.Logger, wordsStream chan Result) Producer {
 	}
 }
 
-func (p *Producer) Produce(readWords ReadWordsFn, filterFunc ...FilterFunc) {
-	words, err := readWords(filterFunc...)
+func (p *Producer) Produce(readWords ReadWordsFn, filterFn FilterFn, mutatorFn MutatorFn) {
+	words, err := readWords(mutatorFn, filterFn)
 	if err != nil {
 		p.wordsStream <- Failure(err)
 	} else {

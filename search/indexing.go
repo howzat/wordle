@@ -1,7 +1,9 @@
 package search
 
 import (
+	"fmt"
 	"hash"
+	"math/rand"
 
 	"blainsmith.com/go/seahash"
 	"github.com/cespare/xxhash"
@@ -26,8 +28,8 @@ func NewIndexedDB(log logr.Logger, words []string, idFn IDFn) (*IndexedDB, error
 		}
 
 		reverseIndex[id] = w
-		for _, c := range []rune(w) {
-			index[c] = append(index[c], id)
+		for _, c := range w {
+			index[string(c)] = append(index[string(c)], id)
 		}
 	}
 
@@ -41,7 +43,7 @@ func NewIndexedDB(log logr.Logger, words []string, idFn IDFn) (*IndexedDB, error
 type IndexedDB struct {
 	size         int
 	reverseIndex map[uint64]string
-	index        map[rune][]uint64
+	index        map[string][]uint64
 }
 
 type IDFn = func(string) (uint64, error)
@@ -60,32 +62,86 @@ var UseSeaHashID IDFn = NewHashingIDFn(func() hash.Hash64 {
 	return h
 })
 
-func newAlphaMap() map[rune][]uint64 {
-	return map[rune][]uint64{
-		'a': {},
-		'b': {},
-		'c': {},
-		'd': {},
-		'f': {},
-		'g': {},
-		'h': {},
-		'i': {},
-		'j': {},
-		'k': {},
-		'l': {},
-		'm': {},
-		'n': {},
-		'o': {},
-		'p': {},
-		'q': {},
-		'r': {},
-		's': {},
-		't': {},
-		'u': {},
-		'v': {},
-		'w': {},
-		'x': {},
-		'y': {},
-		'z': {},
+var Alphabet = []string{"a",
+	"b",
+	"c",
+	"d",
+	"f",
+	"g",
+	"h",
+	"i",
+	"j",
+	"k",
+	"l",
+	"m",
+	"n",
+	"o",
+	"p",
+	"q",
+	"r",
+	"s",
+	"t",
+	"u",
+	"v",
+	"w",
+	"x",
+	"y",
+	"z"}
+
+func newAlphaMap() map[string][]uint64 {
+	var alphaMap = map[string][]uint64{}
+	for _, s := range Alphabet {
+		alphaMap[s] = []uint64{}
 	}
+	return alphaMap
+}
+
+func (d IndexedDB) PickRandomWord() string {
+
+	for k, _ := range d.index {
+		fmt.Printf("k:%s\n", string(k))
+	}
+
+	firstAlpha := Alphabet[rand.Intn(26)]
+	ids := d.index[firstAlpha]
+	id := ids[rand.Intn(len(ids))]
+	return d.reverseIndex[id]
+}
+
+func (d IndexedDB) CandidateGuess(wordle string) (*Wordle, error) {
+	var candidateGuess string
+	for guess := ""; len(guess) == 0; guess = candidateGuess {
+		candidate := d.PickRandomWord()
+		var knowledge = BuildKnowledgeForGuess(wordle, candidate)
+		if len(knowledge) > 0 {
+			return NewWordleSearch(candidate, knowledge)
+		}
+	}
+	return nil, nil
+}
+
+func BuildKnowledgeForGuess(wordle string, guess string) []Knowlege {
+
+	wb := []byte(wordle)
+	var k = []Knowlege{None, None, None, None, None}
+	for i, char := range guess {
+		pos := findChar(wb, byte(char))
+		if pos >= 0 {
+			if pos == i {
+				k[i] = Full
+			} else {
+				k[i] = Present
+			}
+		}
+	}
+	return k
+}
+
+func findChar(wordle []byte, char byte) int {
+	for i, b := range wordle {
+		if b == char {
+			return i
+		}
+	}
+	return -1
 }
