@@ -3,6 +3,7 @@ package search
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/howzat/wordle/internal/logging"
@@ -86,11 +87,42 @@ func TestLetterMatchProps(t *testing.T) {
 	wordList, err := words.CompileWordList(ctx, log, *wordSource)
 	db, err := NewIndexedDB(*log, wordList.Words, UseXXHashID)
 
-	word := db.PickRandomWord()
-	wordle, err := db.CandidateGuess(word)
-	require.NoError(t, err)
+	for i := 0; i < 1000; i++ {
+		word := db.PickRandomWord()
+		wordle, err := db.CandidateGuess(word)
+		require.NoError(t, err)
+		assert.NotEmpty(t, wordle)
 
-	assert.NotEmpty(t, wordle)
+		searchResults, err := db.Search(*wordle)
+		allKnownLetter := wordle.AllKnownLetters()
+		for _, result := range searchResults.Items {
+			mustContainAllKnownLetters(t, allKnownLetter, result)
+			if len(wordle.FullyKnownLetters()) > 0 {
+				mustPreserveFullLetterMatches(t, *wordle, result)
+			}
+		}
+	}
+
+}
+
+func mustPreserveFullLetterMatches(t *testing.T, wordle Wordle, result string) {
+	t.Helper()
+	for i, k := range wordle.knowledge {
+		if k == Full {
+			expected := string(wordle.letters[i])
+			actual := string(result[i])
+			if expected != actual {
+				t.Fatalf(fmt.Sprintf("[%s] char [%s] at position[%d] was not in a matching position in [%s]", wordle.letters, expected, i, result))
+			}
+		}
+	}
+}
+
+func mustContainAllKnownLetters(t *testing.T, chars []string, item string) {
+	t.Helper()
+	for _, ch := range chars {
+		assert.Contains(t, item, ch)
+	}
 }
 
 func TestBuildKnowledge(t *testing.T) {

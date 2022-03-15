@@ -1,9 +1,11 @@
 package search
 
 import (
-	"fmt"
 	"hash"
 	"math/rand"
+	"sort"
+	"strings"
+	"time"
 
 	"blainsmith.com/go/seahash"
 	"github.com/cespare/xxhash"
@@ -14,8 +16,15 @@ func NewIndexedDB(log logr.Logger, words []string, idFn IDFn) (*IndexedDB, error
 	log.WithName("IndexDB")
 	index := newAlphaMap()
 	reverseIndex := make(map[uint64]string, len(words))
-
+	var recall = map[string]bool{}
 	for _, w := range words {
+
+		if _, ok := recall[w]; !ok {
+			recall[w] = true
+		} else {
+			continue
+		}
+
 		id, err := idFn(w)
 		if err != nil {
 			return nil, err
@@ -97,15 +106,50 @@ func newAlphaMap() map[string][]uint64 {
 }
 
 func (d IndexedDB) PickRandomWord() string {
-
-	for k, _ := range d.index {
-		fmt.Printf("k:%s\n", string(k))
-	}
-
-	firstAlpha := Alphabet[rand.Intn(26)]
+	rand.Seed(time.Now().Unix())
+	firstAlpha := Alphabet[rand.Intn(25)]
 	ids := d.index[firstAlpha]
 	id := ids[rand.Intn(len(ids))]
 	return d.reverseIndex[id]
+}
+
+func (d IndexedDB) Search(guess Wordle) (*MatchResult, error) {
+
+	letters := guess.AllKnownLetters()
+	var candidateIds []uint64
+	for _, letter := range letters {
+		candidateIds = append(candidateIds, d.index[letter]...)
+	}
+
+	var recall = map[string]bool{}
+	var candidateResults []string
+	for _, id := range candidateIds {
+		candidateWord := d.reverseIndex[id]
+		if _, ok := recall[candidateWord]; !ok {
+			recall[candidateWord] = true // we've processed this word before
+			if containsAllKnownLetters(letters, candidateWord) {
+				candidateResults = append(candidateResults, candidateWord)
+			}
+		} else {
+			continue
+		}
+	}
+
+	sort.Strings(candidateResults)
+	return &MatchResult{
+		Items: candidateResults,
+		Guess: guess,
+	}, nil
+}
+
+func containsAllKnownLetters(letters []string, word string) bool {
+	for _, letter := range letters {
+		if !strings.Contains(word, letter) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (d IndexedDB) CandidateGuess(wordle string) (*Wordle, error) {
@@ -113,8 +157,13 @@ func (d IndexedDB) CandidateGuess(wordle string) (*Wordle, error) {
 	for guess := ""; len(guess) == 0; guess = candidateGuess {
 		candidate := d.PickRandomWord()
 		var knowledge = BuildKnowledgeForGuess(wordle, candidate)
-		if len(knowledge) > 0 {
-			return NewWordleSearch(candidate, knowledge)
+		search, err := NewWordleSearch(candidate, knowledge)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(search.AllKnownLetters()) > 0 {
+			return search, nil
 		}
 	}
 	return nil, nil

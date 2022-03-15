@@ -6,13 +6,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SearchEngine interface {
+type WordSearchEngine interface {
 	Search(guess Wordle) (*MatchResult, error)
 }
 
 type Wordle struct {
 	letters   string
 	knowledge []Knowlege
+}
+
+func (w Wordle) FullyKnownLetters() []string {
+	return w.filterKnowledgeBy(func(knowledge Knowlege) bool {
+		return knowledge == Full
+	})
+}
+
+func (w Wordle) AllKnownLetters() []string {
+	return w.filterKnowledgeBy(func(knowledge Knowlege) bool {
+		return knowledge != None
+	})
+}
+
+func (w Wordle) filterKnowledgeBy(f func(knowledge Knowlege) bool) []string {
+	var known []string
+	for i, k := range w.knowledge {
+		if f(k) {
+			known = append(known, string(w.letters[i]))
+		}
+	}
+	return known
 }
 
 type Knowlege int8
@@ -42,7 +64,7 @@ func NewWordleSearch(letters string, knowledge []Knowlege) (*Wordle, error) {
 	}, nil
 }
 
-func NewSearchEngine(db *IndexedDB) SearchEngine {
+func NewSearchEngine(db *IndexedDB) WordSearchEngine {
 	return &LocalSearchEngine{
 		words: db,
 	}
