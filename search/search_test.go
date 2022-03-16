@@ -102,7 +102,6 @@ func TestLetterMatchProps(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func mustPreserveFullLetterMatches(t *testing.T, wordle Wordle, result string) {

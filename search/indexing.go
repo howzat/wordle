@@ -127,7 +127,8 @@ func (d IndexedDB) Search(guess Wordle) (*MatchResult, error) {
 		candidateWord := d.reverseIndex[id]
 		if _, ok := recall[candidateWord]; !ok {
 			recall[candidateWord] = true // we've processed this word before
-			if containsAllKnownLetters(letters, candidateWord) {
+			if containsAllKnownLetters(letters, candidateWord) &&
+				fullyKnownLettersAreInCorrectPosition(guess, candidateWord) {
 				candidateResults = append(candidateResults, candidateWord)
 			}
 		} else {
@@ -140,6 +141,21 @@ func (d IndexedDB) Search(guess Wordle) (*MatchResult, error) {
 		Items: candidateResults,
 		Guess: guess,
 	}, nil
+}
+
+func fullyKnownLettersAreInCorrectPosition(wordle Wordle, letters string) bool {
+	if len(wordle.FullyKnownLetters()) == 0 {
+		return false
+	}
+
+	for i, k := range wordle.knowledge {
+		if k == Full {
+			if letters[i] != wordle.letters[i] {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func containsAllKnownLetters(letters []string, word string) bool {
