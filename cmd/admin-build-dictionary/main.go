@@ -26,14 +26,14 @@ func main() {
 	)
 
 	ctx := context.Background()
-	files, err := words.NewWordSourceFiles("dictionaries")
+	wordSource, err := words.NewWordSources("dictionaries")
 	if err != nil {
 		panic(err)
 	}
 
-	compiled, compileErr := words.CompileWordList(ctx, log, *files)
+	compiled, compileErr := wordSource.LoadWords(ctx, log)
 
-	log.Info("complete", "ingested", compiled.Ingested, "error", compileErr)
+	log.Info("complete", "ingested", compiled.Size, "error", compileErr)
 
 	db, err := search.NewIndexedDB(*log, compiled.Words, search.UseSeaHashID)
 

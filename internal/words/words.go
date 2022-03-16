@@ -11,7 +11,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func CompileWordList(ctx context.Context, log *logr.Logger, wordSource WordSources) (*WordList, error) {
+func (w *WordSources) LoadWords(ctx context.Context, log *logr.Logger) (*Words, error) {
 
 	ctx, done := context.WithCancel(ctx)
 	consumer := NewConsumer(log)
@@ -23,18 +23,18 @@ func CompileWordList(ctx context.Context, log *logr.Logger, wordSource WordSourc
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		englishWordsDictionary := ParseLineSeperatedDictionary(wordSource.EnglishWordFile)
+		englishWordsDictionary := ParseLineSeperatedDictionary(w.EnglishWordFile)
 		producer.Produce(englishWordsDictionary, WordleCandidate, ChangeToLowerCase)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		localWordsList := ParseLineSeperatedDictionary(wordSource.LocalWordFiles[0])
+		localWordsList := ParseLineSeperatedDictionary(w.LocalWordFiles[0])
 		producer.Produce(localWordsList, WordleCandidate, ChangeToLowerCase)
 	}()
 
-	for _, wordFile := range wordSource.WordSetFiles {
+	for _, wordFile := range w.WordSetFiles {
 		wg.Add(1)
 		fp := wordFile
 		go func() {
@@ -48,18 +48,18 @@ func CompileWordList(ctx context.Context, log *logr.Logger, wordSource WordSourc
 
 	words := consumer.ListWords()
 
-	return &WordList{
-		Ingested: len(words),
-		Words:    words,
+	return &Words{
+		Size:  len(words),
+		Words: words,
 	}, nil
 }
 
-type WordList struct {
-	Ingested int
-	Words    []string
+type Words struct {
+	Size  int
+	Words []string
 }
 
-func NewWordSourceFiles(baseDir string) (*WordSources, error) {
+func NewWordSources(baseDir string) (*WordSources, error) {
 	wordSources := WordSources{baseDir: baseDir}
 	ewf, err := wordSources.filepath("english-words/words_alpha.txt")
 	if err != nil {
@@ -105,8 +105,8 @@ type WordSources struct {
 	baseDir         string
 }
 
-func (c WordSources) filepath(path string) (string, error) {
-	fullpath := c.baseDir + "/" + path
+func (w WordSources) filepath(path string) (string, error) {
+	fullpath := w.baseDir + "/" + path
 	_, err := os.Stat(fullpath)
 	return fullpath, err
 }

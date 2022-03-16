@@ -81,10 +81,10 @@ func TestLetterMatchProps(t *testing.T) {
 	log, err := logging.NewProductionLogger("TestLetterMatchProps")
 	require.NoError(t, err)
 
-	wordSource, err := words.NewWordSourceFiles("../dictionaries")
+	wordSource, err := words.NewWordSources("../dictionaries")
 	require.NoError(t, err)
 
-	wordList, err := words.CompileWordList(ctx, log, *wordSource)
+	wordList, err := wordSource.LoadWords(ctx, log)
 	db, err := NewIndexedDB(*log, wordList.Words, UseXXHashID)
 
 	for i := 0; i < 1000; i++ {

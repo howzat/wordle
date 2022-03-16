@@ -14,10 +14,10 @@ func TestCompileWordList(t *testing.T) {
 	log, err := logging.NewProductionLogger("TestCompileWordList")
 	require.NoError(t, err)
 
-	files, err := NewWordSourceFiles("../../dictionaries")
+	wordSource, err := NewWordSources("../../dictionaries")
 	require.NoError(t, err)
-	compiled, err := CompileWordList(context.TODO(), log, *files)
+	compiled, err := wordSource.LoadWords(context.TODO(), log)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 31941, compiled.Ingested)
+	assert.Equal(t, 31941, compiled.Size)
 }
