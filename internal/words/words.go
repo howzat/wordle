@@ -3,7 +3,6 @@ package words
 import (
 	"context"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -61,6 +60,9 @@ type Words struct {
 
 func NewWordSources(baseDir string) (*WordSources, error) {
 	wordSources := WordSources{baseDir: baseDir}
+	if len(baseDir) == 0 {
+		panic(baseDir)
+	}
 	ewf, err := wordSources.filepath("english-words/words_alpha.txt")
 	if err != nil {
 		return nil, err
@@ -75,13 +77,8 @@ func NewWordSources(baseDir string) (*WordSources, error) {
 
 	wordSources.LocalWordFiles = []string{ld}
 
+	var wsf []string
 	directory, err := wordSources.filepath("wordset-dictionary/data/")
-	wordSetDirectory, err := ioutil.ReadDir(directory)
-	if err != nil {
-		return nil, WrapErr(err, "could not list contents of directory [%v]", directory)
-	}
-
-	wsf := make([]string, len(wordSetDirectory))
 	err = filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			panic(err)

@@ -10,15 +10,16 @@ import (
 	"blainsmith.com/go/seahash"
 	"github.com/cespare/xxhash"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 )
 
 func NewIndexedDB(log logr.Logger, words []string, idFn IDFn) (*IndexedDB, error) {
 	log.WithName("IndexDB")
-	index := newAlphaMap()
+	index := map[string][]uint64{}
 	reverseIndex := make(map[uint64]string, len(words))
 	var recall = map[string]bool{}
-	for _, w := range words {
-
+	for _, lw := range words {
+		w := strings.ToLower(lw)
 		if _, ok := recall[w]; !ok {
 			recall[w] = true
 		} else {
@@ -32,7 +33,7 @@ func NewIndexedDB(log logr.Logger, words []string, idFn IDFn) (*IndexedDB, error
 
 		if a, ok := reverseIndex[id]; ok {
 			if a != w {
-				log.Info("possible collision between %v and %v\n", a, w)
+				return nil, errors.Errorf("hash collision between %v and %v", a, w)
 			}
 		}
 
@@ -95,14 +96,7 @@ var Alphabet = []string{"a",
 	"w",
 	"x",
 	"y",
-	"z"}
-
-func newAlphaMap() map[string][]uint64 {
-	var alphaMap = map[string][]uint64{}
-	for _, s := range Alphabet {
-		alphaMap[s] = []uint64{}
-	}
-	return alphaMap
+	"z",
 }
 
 func (d IndexedDB) PickRandomWord() string {

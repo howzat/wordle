@@ -16,6 +16,9 @@ func TestCompileWordList(t *testing.T) {
 
 	wordSource, err := NewWordSources("../../dictionaries")
 	require.NoError(t, err)
+
+	assert.Equal(t, 27, len(wordSource.WordSetFiles))
+
 	compiled, err := wordSource.LoadWords(context.TODO(), log)
 
 	assert.NoError(t, err)

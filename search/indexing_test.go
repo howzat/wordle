@@ -2,6 +2,7 @@ package search
 
 import (
 	"fmt"
+	"hash"
 	"math/rand"
 	"runtime"
 	"testing"
@@ -11,6 +12,25 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestHashingIndexingWordDB(t *testing.T) {
+	log, err := logging.NewProductionLogger(t.Name())
+	require.NoError(t, err)
+
+	db, err := NewIndexedDB(*log, []string{"chunk", "latch", "LATCH", "Latch"}, UseXXHashID)
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, len(db.reverseIndex))
+	assert.Equal(t, 8, len(db.index)) // c,h,u,n,k,l,a,t
+}
+
+func TestHashingIndexingCollisionsWordDB(t *testing.T) {
+	log, err := logging.NewProductionLogger(t.Name())
+	require.NoError(t, err)
+
+	_, err = NewIndexedDB(*log, []string{"chunk", "latch", "LATCH", "Latch"}, UseFixedHasher)
+	assert.EqualError(t, err, "hash collision between chunk and latch")
+}
 
 func TestHashingConsistencyForIndexedWordDB(t *testing.T) {
 	t.Run("test indexing with xxHash", testIndexingWithHasher(UseXXHashID))
@@ -31,7 +51,7 @@ func testIndexingWithHasher(id IDFn) func(b *testing.T) {
 		latchID, err := id("latch")
 		require.NoError(t, err)
 
-		index := newAlphaMap()
+		index := map[string][]uint64{}
 		index["a"] = []uint64{latchID}
 		index["c"] = []uint64{chunkID, latchID}
 		index["h"] = []uint64{chunkID, latchID}
@@ -98,4 +118,21 @@ func PrintMemUsage() {
 
 func bToMb(b uint64) uint64 {
 	return b / 1024 / 1024
+}
+
+var UseFixedHasher IDFn = NewHashingIDFn(func() hash.Hash64 {
+	var h hash.Hash64 = &fixedHasher{}
+	return h
+})
+
+type fixedHasher struct{ p []byte }
+
+func (f *fixedHasher) Sum64() uint64       { return uint64(1) }
+func (f *fixedHasher) Sum(b []byte) []byte { return b }
+func (f *fixedHasher) Reset()              {}
+func (f *fixedHasher) BlockSize() int      { return 1 }
+func (f *fixedHasher) Size() int           { return len(f.p) }
+func (f *fixedHasher) Write(p []byte) (n int, err error) {
+	f.p = p
+	return len(p), nil
 }
