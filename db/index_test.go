@@ -1,4 +1,4 @@
-package search
+package db
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ func TestHashingIndexingWordDB(t *testing.T) {
 	log, err := logging.NewProductionLogger(t.Name())
 	require.NoError(t, err)
 
-	db, err := NewIndexedDB(*log, []string{"chunk", "latch", "LATCH", "Latch"}, UseXXHashID)
+	db, err := NewIndex(*log, []string{"chunk", "latch", "LATCH", "Latch"}, UseXXHashID)
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, len(db.reverseIndex))
@@ -28,13 +28,13 @@ func TestHashingIndexingCollisionsWordDB(t *testing.T) {
 	log, err := logging.NewProductionLogger(t.Name())
 	require.NoError(t, err)
 
-	_, err = NewIndexedDB(*log, []string{"chunk", "latch", "LATCH", "Latch"}, UseFixedHasher)
+	_, err = NewIndex(*log, []string{"chunk", "latch", "LATCH", "Latch"}, UseFixedHasher)
 	assert.EqualError(t, err, "hash collision between chunk and latch")
 }
 
 func TestHashingConsistencyForIndexedWordDB(t *testing.T) {
 	t.Run("test indexing with xxHash", testIndexingWithHasher(UseXXHashID))
-	t.Run("test indexing with seaHash", testIndexingWithHasher(UseSeaHashID))
+	t.Run("test indexing with seaHash", testIndexingWithHasher(UseXXHashID)) //TODO: use other hasher
 }
 
 func testIndexingWithHasher(id IDFn) func(b *testing.T) {
@@ -42,7 +42,7 @@ func testIndexingWithHasher(id IDFn) func(b *testing.T) {
 		log, err := logging.NewProductionLogger(t.Name())
 		require.NoError(t, err)
 
-		db, err := NewIndexedDB(*log, []string{"chunk", "latch"}, id)
+		db, err := NewIndex(*log, []string{"chunk", "latch"}, id)
 		require.NoError(t, err)
 
 		chunkID, err := id("chunk")
@@ -71,7 +71,7 @@ func testIndexingWithHasher(id IDFn) func(b *testing.T) {
 // SeaHashIndexedWordDB-8   1000000000	         0.5473 ns/op
 func BenchmarkTestHashingForIndexedWordDB(b *testing.B) {
 	b.Run("xxHash hasher", testHasher(UseXXHashID))
-	b.Run("seaHash hasher", testHasher(UseSeaHashID))
+	b.Run("seaHash hasher", testHasher(UseXXHashID)) //TODO Use other hasher
 }
 
 func testHasher(id IDFn) func(b *testing.B) {
@@ -89,7 +89,7 @@ func testHasher(id IDFn) func(b *testing.B) {
 			deduped[letters] = true
 		}
 
-		db, err := NewIndexedDB(*log, words, id)
+		db, err := NewIndex(*log, words, id)
 		require.NoError(b, err)
 		b.Logf("index contains %v items", db.size)
 		assert.Equal(b, db.size, len(deduped))

@@ -1,9 +1,10 @@
-package search
+package db
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/howzat/wordle/internal/logging"
@@ -58,7 +59,7 @@ func TestLetterMatches(t *testing.T) {
 			log, err := logging.NewProductionLogger(tt.name)
 			require.NoError(t, err)
 
-			db, err := NewIndexedDB(*log, tt.dictionary, UseXXHashID)
+			db, err := NewIndex(*log, tt.dictionary, UseXXHashID)
 			require.NoError(t, err)
 
 			wordleDb := NewSearchEngine(db)
@@ -81,11 +82,12 @@ func TestLetterMatchProps(t *testing.T) {
 	log, err := logging.NewProductionLogger("TestLetterMatchProps")
 	require.NoError(t, err)
 
+	require.NotEmpty(t, os.Getenv("DICTIONARY_DIR"))
 	wordSource, err := words.NewWordSources("../dictionaries")
 	require.NoError(t, err)
 
 	wordList, err := wordSource.LoadWords(ctx, log)
-	db, err := NewIndexedDB(*log, wordList.Words, UseXXHashID)
+	db, err := NewIndex(*log, wordList.Words, UseXXHashID)
 
 	for i := 0; i < 1000; i++ {
 		word := db.PickRandomWord()

@@ -1,4 +1,4 @@
-package search
+package db
 
 import (
 	"hash"
@@ -7,14 +7,20 @@ import (
 	"strings"
 	"time"
 
-	"blainsmith.com/go/seahash"
 	"github.com/cespare/xxhash"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 )
 
-func NewIndexedDB(log logr.Logger, words []string, idFn IDFn) (*IndexedDB, error) {
-	log.WithName("IndexDB")
+type Index struct {
+	size         int
+	reverseIndex map[uint64]string
+	index        map[string][]uint64
+}
+
+type IDFn = func(string) (uint64, error)
+
+func NewIndex(_ logr.Logger, words []string, idFn IDFn) (*Index, error) {
 	index := map[string][]uint64{}
 	reverseIndex := make(map[uint64]string, len(words))
 	var recall = map[string]bool{}
@@ -43,20 +49,12 @@ func NewIndexedDB(log logr.Logger, words []string, idFn IDFn) (*IndexedDB, error
 		}
 	}
 
-	return &IndexedDB{
+	return &Index{
 		size:         len(reverseIndex),
 		reverseIndex: reverseIndex,
 		index:        index,
 	}, nil
 }
-
-type IndexedDB struct {
-	size         int
-	reverseIndex map[uint64]string
-	index        map[string][]uint64
-}
-
-type IDFn = func(string) (uint64, error)
 
 func NewHashingIDFn(hr func() hash.Hash64) IDFn {
 	return func(s string) (uint64, error) {
@@ -67,10 +65,6 @@ func NewHashingIDFn(hr func() hash.Hash64) IDFn {
 }
 
 var UseXXHashID IDFn = NewHashingIDFn(xxhash.New)
-var UseSeaHashID IDFn = NewHashingIDFn(func() hash.Hash64 {
-	var h hash.Hash64 = seahash.New()
-	return h
-})
 
 var Alphabet = []string{"a",
 	"b",
@@ -99,7 +93,7 @@ var Alphabet = []string{"a",
 	"z",
 }
 
-func (d IndexedDB) PickRandomWord() string {
+func (d Index) PickRandomWord() string {
 	rand.Seed(time.Now().Unix())
 	firstAlpha := Alphabet[rand.Intn(25)]
 	ids := d.index[firstAlpha]
@@ -107,7 +101,7 @@ func (d IndexedDB) PickRandomWord() string {
 	return d.reverseIndex[id]
 }
 
-func (d IndexedDB) Search(guess Wordle) (*MatchResult, error) {
+func (d Index) Search(guess Wordle) (*MatchResult, error) {
 
 	letters := guess.AllKnownLetters()
 	var candidateIds []uint64
@@ -162,7 +156,7 @@ func containsAllKnownLetters(letters []string, word string) bool {
 	return true
 }
 
-func (d IndexedDB) CandidateGuess(wordle string) (*Wordle, error) {
+func (d Index) CandidateGuess(wordle string) (*Wordle, error) {
 	var candidateGuess string
 	for guess := ""; len(guess) == 0; guess = candidateGuess {
 		candidate := d.PickRandomWord()

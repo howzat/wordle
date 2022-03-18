@@ -9,15 +9,17 @@ import (
 
 	"github.com/sethvargo/go-envconfig"
 
+	"github.com/howzat/wordle/db"
 	"github.com/howzat/wordle/internal/logging"
 	"github.com/howzat/wordle/internal/words"
-	"github.com/howzat/wordle/search"
 )
 
 var CommitID string
 
+const DictionaryBaseDirKey = "DICTIONARY_DIR"
+
 type WordleConfig struct {
-	BaseDir     string `env:"DICTIONARY_BASE_DIR"`
+	BaseDir     string `env:"DICTIONARY_DIR"`
 	Environment string `env:"ENVIRONMENT"`
 }
 
@@ -53,26 +55,26 @@ func main() {
 
 	log.Info("complete", "ingested", compiled.Size, "error", compileErr)
 
-	db, err := search.NewIndexedDB(*log, compiled.Words, search.UseXXHashID)
+	index, err := db.NewIndex(*log, compiled.Words, db.UseXXHashID)
 
 	if err != nil {
 		panic(err)
 	}
 
-	ws := search.NewSearchEngine(db)
+	ws := db.NewSearchEngine(index)
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Simple Shell")
 	fmt.Println("---------------------")
 
-	wordle := db.PickRandomWord()
+	wordle := index.PickRandomWord()
 
 	for {
 		fmt.Print("guess> ")
 		choice, _ := reader.ReadString('\n')
 		choice = strings.Replace(choice, "\n", "", -1)
 
-		s, err := search.NewWordleSearch(choice, search.BuildKnowledgeForGuess(wordle, choice))
+		s, err := db.NewWordleSearch(choice, db.BuildKnowledgeForGuess(wordle, choice))
 		if err != nil {
 			fmt.Println(err.Error())
 		}

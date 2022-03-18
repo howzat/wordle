@@ -1,4 +1,4 @@
-package search
+package db
 
 import (
 	"reflect"
@@ -64,14 +64,14 @@ func NewWordleSearch(letters string, knowledge []Knowlege) (*Wordle, error) {
 	}, nil
 }
 
-func NewSearchEngine(db *IndexedDB) WordSearchEngine {
+func NewSearchEngine(db *Index) WordSearchEngine {
 	return &LocalSearchEngine{
 		words: db,
 	}
 }
 
 type LocalSearchEngine struct {
-	words *IndexedDB
+	words *Index
 }
 
 var NoKnowledge = []Knowlege{None, None, None, None, None}
