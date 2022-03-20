@@ -1,4 +1,4 @@
-package words
+package wordgen
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func (w *WordSources) LoadWords(ctx context.Context, log *logr.Logger) (*Words, error) {
+func (w *WordSources) LoadWords(ctx context.Context, log *logr.Logger, mutate MutatorFn, filter FilterFn) (*Words, error) {
 
 	ctx, done := context.WithCancel(ctx)
 	consumer := NewConsumer(log)
@@ -23,14 +23,14 @@ func (w *WordSources) LoadWords(ctx context.Context, log *logr.Logger) (*Words, 
 	go func() {
 		defer wg.Done()
 		englishWordsDictionary := ParseLineSeperatedDictionary(w.EnglishWordFile)
-		producer.Produce(englishWordsDictionary, WordleCandidate, ChangeToLowerCase)
+		producer.Produce(englishWordsDictionary, filter, mutate)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		localWordsList := ParseLineSeperatedDictionary(w.LocalWordFiles[0])
-		producer.Produce(localWordsList, WordleCandidate, ChangeToLowerCase)
+		producer.Produce(localWordsList, filter, mutate)
 	}()
 
 	for _, wordFile := range w.WordSetFiles {
@@ -38,7 +38,7 @@ func (w *WordSources) LoadWords(ctx context.Context, log *logr.Logger) (*Words, 
 		fp := wordFile
 		go func() {
 			defer wg.Done()
-			producer.Produce(ParseWordsetDictionary(fp), WordleCandidate, ChangeToLowerCase)
+			producer.Produce(ParseWordsetDictionary(fp), filter, mutate)
 		}()
 	}
 
@@ -58,11 +58,8 @@ type Words struct {
 	Words []string
 }
 
-func NewWordSources(baseDir string) (*WordSources, error) {
-	wordSources := WordSources{baseDir: baseDir}
-	if len(baseDir) == 0 {
-		panic(baseDir)
-	}
+func NewWordSources(config Config) (*WordSources, error) {
+	wordSources := WordSources{baseDir: config.BaseDir}
 	ewf, err := wordSources.filepath("english-words/words_alpha.txt")
 	if err != nil {
 		return nil, err

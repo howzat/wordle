@@ -1,14 +1,14 @@
 package db
 
 import (
-	"context"
-	"errors"
+	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"testing"
 
-	"github.com/howzat/wordle/internal/logging"
-	"github.com/howzat/wordle/internal/words"
+	"github.com/howzat/wordle"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,7 +56,7 @@ func TestLetterMatches(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			log, err := logging.NewProductionLogger(tt.name)
+			log, err := wordle.NewProductionLogger(tt.name)
 			require.NoError(t, err)
 
 			db, err := NewIndex(*log, tt.dictionary, UseXXHashID)
@@ -78,32 +78,54 @@ func TestLetterMatches(t *testing.T) {
 
 func TestLetterMatchProps(t *testing.T) {
 
-	ctx := context.TODO()
-	log, err := logging.NewProductionLogger("TestLetterMatchProps")
+	log, err := wordle.NewProductionLogger("TestLetterMatchProps")
 	require.NoError(t, err)
 
-	require.NotEmpty(t, os.Getenv("DICTIONARY_DIR"))
-	wordSource, err := words.NewWordSources("../dictionaries")
+	words, err := loadWords("dictionary.txt")
 	require.NoError(t, err)
 
-	wordList, err := wordSource.LoadWords(ctx, log)
-	db, err := NewIndex(*log, wordList.Words, UseXXHashID)
+	db, err := NewIndex(*log, words, UseXXHashID)
 
 	for i := 0; i < 1000; i++ {
 		word := db.PickRandomWord()
-		wordle, err := db.CandidateGuess(word)
+		wdl, err := db.CandidateGuess(word)
 		require.NoError(t, err)
-		assert.NotEmpty(t, wordle)
+		assert.NotEmpty(t, wdl)
 
-		searchResults, err := db.Search(*wordle)
-		allKnownLetter := wordle.AllKnownLetters()
+		searchResults, err := db.Search(*wdl)
+		allKnownLetter := wdl.AllKnownLetters()
 		for _, result := range searchResults.Items {
 			mustContainAllKnownLetters(t, allKnownLetter, result)
-			if len(wordle.FullyKnownLetters()) > 0 {
-				mustPreserveFullLetterMatches(t, *wordle, result)
+			if len(wdl.FullyKnownLetters()) > 0 {
+				mustPreserveFullLetterMatches(t, *wdl, result)
 			}
 		}
 	}
+}
+
+func loadWords(filepath string) ([]string, error) {
+	fileReader, err := os.Open(filepath)
+	if err != nil {
+		return nil, wordle.WrapErr(err, "error reading file contents [%v]", filepath)
+	}
+
+	scanner := bufio.NewScanner(fileReader)
+	scanner.Split(bufio.ScanLines)
+
+	words := map[string]bool{}
+	var uwords []string
+	for scanner.Scan() {
+		word := scanner.Text()
+		if words != nil {
+			if _, present := words[word]; !present {
+				words[word] = true
+				uwords = append(uwords, word)
+			}
+		}
+	}
+
+	sort.Strings(uwords)
+	return uwords, nil
 }
 
 func mustPreserveFullLetterMatches(t *testing.T, wordle Wordle, result string) {

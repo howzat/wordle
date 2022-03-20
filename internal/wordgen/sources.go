@@ -1,4 +1,4 @@
-package words
+package wordgen
 
 import (
 	"bufio"
@@ -7,6 +7,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/howzat/wordle"
 )
 
 var WordleCandidate FilterFn = inOrder(Length(5), Alphabetical(), NoFilter())
@@ -25,13 +27,13 @@ func andThen(y FilterFn, f FilterFn) FilterFn {
 	}
 }
 
-var NormaliseWord MutatorFn = mInOrder(TrimSurroundingWhitespace, ChangeToLowerCase)
+var NormaliseWord MutatorFn = mInOrder(TrimSurroundingWhitespace, LowercaseWord)
 
 var TrimSurroundingWhitespace MutatorFn = func(s string) string {
 	return strings.TrimSpace(s)
 }
 
-var ChangeToLowerCase MutatorFn = func(s string) string {
+var LowercaseWord MutatorFn = func(s string) string {
 	return strings.ToLower(s)
 }
 
@@ -86,17 +88,17 @@ func ParseWordsetDictionary(filepath string) ReadWordsFn {
 		f, err := ioutil.ReadFile(filepath)
 
 		if err != nil {
-			return nil, WrapErr(err, "error reading filepath [%v]", filepath)
+			return nil, wordle.WrapErr(err, "error reading filepath [%v]", filepath)
 		}
 
 		var ws WordsetFile
 		err = json.Unmarshal(f, &ws)
 		if err != nil {
-			return nil, WrapErr(err, "error unmarshalling JSON from filepath [%v]", filepath)
+			return nil, wordle.WrapErr(err, "error unmarshalling JSON from filepath [%v]", filepath)
 		}
 
 		if err != nil {
-			return nil, WrapErr(err, "error adding words from filepath [%v]", filepath)
+			return nil, wordle.WrapErr(err, "error adding words from filepath [%v]", filepath)
 		}
 
 		var words []string
@@ -114,7 +116,7 @@ func ParseLineSeperatedDictionary(filepath string) ReadWordsFn {
 	return func(mutate MutatorFn, filter FilterFn) ([]string, error) {
 		fileReader, err := os.Open(filepath)
 		if err != nil {
-			return nil, WrapErr(err, "error reading file contents [%v]", filepath)
+			return nil, wordle.WrapErr(err, "error reading file contents [%v]", filepath)
 		}
 
 		scanner := bufio.NewScanner(fileReader)

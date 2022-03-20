@@ -1,4 +1,4 @@
-package words
+package wordle
 
 import (
 	"fmt"

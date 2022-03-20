@@ -1,4 +1,4 @@
-package logging
+package wordle
 
 import (
 	"github.com/go-logr/logr"

@@ -1,4 +1,4 @@
-package words
+package wordgen
 
 import (
 	"io/ioutil"

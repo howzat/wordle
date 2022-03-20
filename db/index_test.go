@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/howzat/wordle/internal/logging"
+	"github.com/howzat/wordle"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestHashingIndexingWordDB(t *testing.T) {
-	log, err := logging.NewProductionLogger(t.Name())
+	log, err := wordle.NewProductionLogger(t.Name())
 	require.NoError(t, err)
 
 	db, err := NewIndex(*log, []string{"chunk", "latch", "LATCH", "Latch"}, UseXXHashID)
@@ -25,7 +25,7 @@ func TestHashingIndexingWordDB(t *testing.T) {
 }
 
 func TestHashingIndexingCollisionsWordDB(t *testing.T) {
-	log, err := logging.NewProductionLogger(t.Name())
+	log, err := wordle.NewProductionLogger(t.Name())
 	require.NoError(t, err)
 
 	_, err = NewIndex(*log, []string{"chunk", "latch", "LATCH", "Latch"}, UseFixedHasher)
@@ -39,7 +39,7 @@ func TestHashingConsistencyForIndexedWordDB(t *testing.T) {
 
 func testIndexingWithHasher(id IDFn) func(b *testing.T) {
 	return func(t *testing.T) {
-		log, err := logging.NewProductionLogger(t.Name())
+		log, err := wordle.NewProductionLogger(t.Name())
 		require.NoError(t, err)
 
 		db, err := NewIndex(*log, []string{"chunk", "latch"}, id)
@@ -76,7 +76,7 @@ func BenchmarkTestHashingForIndexedWordDB(b *testing.B) {
 
 func testHasher(id IDFn) func(b *testing.B) {
 	return func(b *testing.B) {
-		log, err := logging.NewProductionLogger(b.Name())
+		log, err := wordle.NewProductionLogger(b.Name())
 		require.NoError(b, err)
 
 		rand.Seed(time.Now().UnixNano())

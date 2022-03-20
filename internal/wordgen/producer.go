@@ -1,4 +1,4 @@
-package words
+package wordgen
 
 import "github.com/go-logr/logr"
 

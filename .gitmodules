@@ -1,6 +1,6 @@
-[submodule "dictionaries/wordset-dictionary"]
-	path = dictionaries/wordset-dictionary
-	url = https://github.com/wordset/wordset-dictionary.git
-[submodule "dictionaries/english-words"]
-	path = dictionaries/english-words
+[submodule "import/wordset-dictionary"]
+	path = import/wordset-dictionary
+	url = git@github.com:wordset/wordset-dictionary.git
+[submodule "import/english-words"]
+	path = import/english-words
 	url = git@github.com:dwyl/english-words.git
