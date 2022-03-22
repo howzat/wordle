@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/howzat/wordle"
 	"github.com/howzat/wordle/internal/wordgen"
@@ -42,6 +45,19 @@ func main() {
 
 	log.Info("complete", "ingested", compiled.Size, "error", compileErr)
 
+	words := map[string]bool{}
+	var uniqueWords []string
+	for _, word := range compiled.Words {
+		if words != nil {
+			if _, present := words[word]; !present {
+				words[word] = true
+				uniqueWords = append(uniqueWords, word)
+			}
+		}
+	}
+
+	log.Info("optimised", "unique", len(uniqueWords))
+
 	dictionaryFile, err := os.OpenFile("cmd/search/dictionary.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	failOnErr(err)
 
@@ -55,10 +71,17 @@ func main() {
 	_, err = dictionaryFile.Seek(0, 0)
 	failOnErr(err)
 
-	for _, word := range compiled.Words {
-		_, err = dictionaryFile.WriteString(word + "\n")
-		failOnErr(err)
+	sort.Sort(sort.StringSlice(uniqueWords))
+
+	log.Info(fmt.Sprintf("About to write %v lines", len(uniqueWords)))
+
+	var builder strings.Builder
+	for _, word := range uniqueWords {
+		builder.WriteString(word + "\n")
 	}
+
+	_, err = dictionaryFile.WriteString(builder.String())
+	failOnErr(err)
 }
 
 func failOnErr(err error) {

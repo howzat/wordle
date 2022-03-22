@@ -81,7 +81,7 @@ func TestLetterMatchProps(t *testing.T) {
 	log, err := wordle.NewProductionLogger("TestLetterMatchProps")
 	require.NoError(t, err)
 
-	words, err := loadWords("dictionary.txt")
+	words, err := loadWords("cmd/search/dictionary.txt")
 	require.NoError(t, err)
 
 	db, err := NewIndex(*log, words, UseXXHashID)
