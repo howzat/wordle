@@ -21,7 +21,7 @@ func (w Wordle) FullyKnownLetters() []string {
 	})
 }
 
-func (w Wordle) AllKnownLetters() []string {
+func (w Wordle) KnownLetters() []string {
 	return w.filterKnowledgeBy(func(knowledge Knowlege) bool {
 		return knowledge != None
 	})
