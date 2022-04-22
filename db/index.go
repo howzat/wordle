@@ -103,18 +103,18 @@ func (d Index) PickRandomWord() string {
 
 func (d Index) Search(guess Wordle) (*MatchResult, error) {
 
-	letters := guess.AllKnownLetters()
-	var candidateIds []uint64
+	letters := guess.KnownLetters()
+	var ids []uint64
 	for _, letter := range letters {
-		candidateIds = append(candidateIds, d.index[letter]...)
+		ids = append(ids, d.index[letter]...)
 	}
 
-	var recall = map[string]bool{}
+	var memo = map[string]bool{}
 	var candidateResults []string
-	for _, id := range candidateIds {
+	for _, id := range ids {
 		candidateWord := d.reverseIndex[id]
-		if _, ok := recall[candidateWord]; !ok {
-			recall[candidateWord] = true // we've processed this word before
+		if _, ok := memo[candidateWord]; !ok {
+			memo[candidateWord] = true // we've processed this word before
 			if containsAllKnownLetters(letters, candidateWord) &&
 				fullyKnownLettersAreInCorrectPosition(guess, candidateWord) {
 				candidateResults = append(candidateResults, candidateWord)
@@ -166,7 +166,7 @@ func (d Index) CandidateGuess(wordle string) (*Wordle, error) {
 			return nil, err
 		}
 
-		if len(search.AllKnownLetters()) > 0 {
+		if len(search.KnownLetters()) > 0 {
 			return search, nil
 		}
 	}

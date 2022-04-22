@@ -81,7 +81,7 @@ func TestLetterMatchProps(t *testing.T) {
 	log, err := wordle.NewProductionLogger("TestLetterMatchProps")
 	require.NoError(t, err)
 
-	words, err := loadWords("cmd/search/dictionary.txt")
+	words, err := loadWords("../cmd/search/dictionary.txt")
 	require.NoError(t, err)
 
 	db, err := NewIndex(*log, words, UseXXHashID)
@@ -93,7 +93,7 @@ func TestLetterMatchProps(t *testing.T) {
 		assert.NotEmpty(t, wdl)
 
 		searchResults, err := db.Search(*wdl)
-		allKnownLetter := wdl.AllKnownLetters()
+		allKnownLetter := wdl.KnownLetters()
 		for _, result := range searchResults.Items {
 			mustContainAllKnownLetters(t, allKnownLetter, result)
 			if len(wdl.FullyKnownLetters()) > 0 {
